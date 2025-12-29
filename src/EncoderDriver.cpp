@@ -4,83 +4,119 @@
 
 BtnDriver::BtnDriver(uint8_t pin) {
     _pin = pin;
-    _last_state = HIGH;
-    _last_debounce_time = 0;
+    _current_reading = LOW;
+    _past_reading = LOW;
+    _last_change_time = 0;
+    _short_press_pending = false;
+    _long_press_pending = false;
+    _long_press_completed = true;
 }
 
 void BtnDriver::begin() {
-    pinMode(_pin, INPUT_PULLUP);
+    if (Config::USE_INTERNAL_PULLUP) {
+        pinMode(_pin, INPUT_PULLUP);
+    } else {
+        pinMode(_pin, INPUT);
+    }
+}
+
+void BtnDriver::update() {
+    // Debounce prevention: Ignore changes within the debounce time
+    if ((millis() - _last_change_time) < Config::BTN_DEBOUNCE_T) {
+        return; 
+    }
+    _past_reading = _current_reading;
+    _current_reading = digitalRead(_pin);
+    
+    // Detect bare change
+    if (_current_reading != _past_reading) {
+        _last_change_time = millis();
+
+        // Detect release
+        if (_current_reading == LOW) {
+            if (_long_press_completed && (millis() - _last_change_time <= Config::LONG_PRESS_DURATION)) {
+                // Valid short press detected
+                _short_press_pending = true;
+            }
+        }
+    }      
+
+    // Detect long press
+    if (_long_press_completed) {
+        if (_current_reading == HIGH && (millis() - _last_change_time >= Config::LONG_PRESS_DURATION)) {
+            _long_press_pending = true;
+            _long_press_completed = false; // Prevent multiple long press detections
+            _current_reading = LOW;
+        }
+    } else if (_current_reading == LOW) {
+        _long_press_completed = true; // Resolve long press state on button release
+    }
 }
 
 bool BtnDriver::get_press() {
-    bool current_reading = digitalRead(_pin);
-    bool pressed = false;
-
-    if ((millis() - _last_debounce_time) > Config::btn_min_delay) {
-        if (current_reading != _last_state) {
-        //  only register if Config::btn_min_delay ms have passed since last change
-        
-            if (current_reading == LOW) {
-                pressed = true;
-            }
-            _last_debounce_time = millis();
-        }
-        _last_state = current_reading;
+    if (_short_press_pending) {
+        _short_press_pending = false;
+        return true;
     }
-
-    return pressed;
+    return false;
 }
 
 bool BtnDriver::get_long_press() {
-    bool current_reading = digitalRead(_pin);
-    bool long_pressed = false;
-
-    if (current_reading == LOW) {
-        if ((millis() - _last_debounce_time) > Config::long_press_duration_ms) {
-            long_pressed = true;
-            _last_debounce_time = millis();
-        }
-    } else {
-        _last_debounce_time = millis();
+    if (_long_press_pending) {
+        _long_press_pending = false;
+        return true;
     }
-
-    return long_pressed;
+    return false;
 }
 
 RotEncDriver::RotEncDriver(uint8_t pinA, uint8_t pinB) {
     _pinA = pinA;
     _pinB = pinB;
-    _last_state_A = HIGH;
-    _last_state_B = HIGH;
-    _last_debounce_time_A = 0;
-    _last_debounce_time_B = 0;
+    _history = 0;
+    _accumulator = 0;
 }
 
 void RotEncDriver::begin() {
-    pinMode(_pinA, INPUT_PULLUP);
-    pinMode(_pinB, INPUT_PULLUP);
+    if (Config::USE_INTERNAL_PULLUP) {
+        pinMode(_pinA, INPUT_PULLUP);
+        pinMode(_pinB, INPUT_PULLUP);
+    } else {
+        pinMode(_pinA, INPUT);
+        pinMode(_pinB, INPUT);
+    }
+    
+    uint8_t start_state = (digitalRead(_pinA) << 1) | digitalRead(_pinB);
+    _history = start_state;
+}
+
+void RotEncDriver::update() {
+    // 1. Read current pins and pack into 2 bits
+    uint8_t current_state = (digitalRead(_pinA) << 1) | digitalRead(_pinB);
+    
+    // 2. Only act if the state has changed
+    if (current_state != (_history & 0x03)) {
+        
+        // 3. Update history: Shift left 2 bits and add new state
+        // Result: [OldA][OldB][NewA][NewB] (4 bits total)
+        _history = ((_history << 2) | current_state) & 0x0F;
+
+        // 4. Look for valid transitions into the "Detent" (Resting) state
+        // Most common resting state is 11 (Both pins HIGH)
+        
+        // Clockwise: 01 -> 11 (History: 0b0111)
+        if (_history == 0b0111) {
+            _accumulator++;
+        }
+        // Counter-Clockwise: 10 -> 11 (History: 0b1011)
+        else if (_history == 0b1011) {
+            _accumulator--;
+        }
+    }
 }
 
 int8_t RotEncDriver::get_rotation() {
-    // 1. Read the current pins and combine them into a 2-bit number
-    uint8_t current_state = (digitalRead(_pinA) << 1) | digitalRead(_pinB);
-    static uint8_t encoder_history = 0;
-    int8_t result = 0;
-
-    // 2. If the state hasn't changed, do nothing
-    if (current_state == (encoder_history & 0x03)) {
-        return 0;
-    }
-
-    // 3. Store the new state in the history (keeping the last 4 bits)
-    // History looks like: [Old_A][Old_B][New_A][New_B]
-    encoder_history = ((encoder_history << 2) | current_state) & 0x0F;
-    
-    // Clockwise transitions
-    if (encoder_history == 0b0111) result = -1; 
-    
-    // Counter-clockwise transitions
-    if (encoder_history == 0b1011) result = 1;
-
+    // Return the accumulated value and clear it
+    int8_t result = _accumulator;
+    _accumulator = 0; 
     return result;
 }

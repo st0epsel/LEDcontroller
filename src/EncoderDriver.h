@@ -2,41 +2,43 @@
 #include <Arduino.h>
 
 class BtnDriver {
-private:
-    uint8_t _pin;           // The hardware pin number
-    bool _last_state;       // To track if the button was high or low last time
-    unsigned long _last_debounce_time; // To prevent "flicker" (bounce)
-
 public:
-    // Constructor: Tells the class which pin to watch
     BtnDriver(uint8_t pin);
-
-    // Initializes the pin mode
     void begin();
-
-    // The function you requested to check for a new press
+    void update(); 
     bool get_press();
-
-    // Get a long press
     bool get_long_press();
+
+private:
+    uint8_t _pin;
+    
+    // State Variables
+    bool _current_reading;
+    bool _past_reading;
+    unsigned long _last_change_time; // Time of the last accepted state change
+    
+    // Logic Variables
+    bool _long_press_completed;
+    
+    // Output Flags
+    bool _short_press_pending;
+    bool _long_press_pending;
 };
 
 class RotEncDriver {
+public:
+    RotEncDriver(uint8_t pinA, uint8_t pinB);
+    void begin();
+    
+    // Core state machine update
+    void update(); 
+    
+    // Returns the total rotation since the last check and resets to 0
+    int8_t get_rotation();
+
 private:
     uint8_t _pinA;
     uint8_t _pinB;
-    bool _last_state_A;
-    bool _last_state_B;  
-    unsigned long _last_debounce_time_A; 
-    unsigned long _last_debounce_time_B;
-
-public:
-    // Constructor: Tells the class which pin to watch
-    RotEncDriver(uint8_t pinA, uint8_t pinB);
-
-    // Initializes the pin mode
-    void begin();
-
-    // The function you requested to check for a new press
-    int8_t get_rotation();
+    uint8_t _history;      // Stores [OldA][OldB][NewA][NewB]
+    int8_t _accumulator;   // Sums up steps between loop cycles
 };
