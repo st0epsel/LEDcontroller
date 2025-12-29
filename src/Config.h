@@ -29,8 +29,9 @@ namespace Config {
 
     constexpr uint8_t btn_min_delay = 200;
     constexpr uint8_t rot_eng_min_delay = 80;
+    constexpr uint16_t long_press_duration_ms = 1500;
 
     // --- SERIAL OUTPUT ---
-    constexpr bool SERIAL_OUTPUT = true;
+    constexpr bool SERIAL_OUTPUT = false;
     constexpr uint32_t SERIAL_BAUDRATE = 115200;
 }

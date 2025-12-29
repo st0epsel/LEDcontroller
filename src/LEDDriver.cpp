@@ -39,22 +39,14 @@ void LEDDriver::setHSV(HSV in) {
 
     if (Config::LOG_BRIGHTNESS) {
         // use pgm_read_byte because the table is stored in Flash (PROGMEM)
-        Serial.print("Raw - R: "); Serial.print(raw.r);
-        Serial.print(" G: "); Serial.print(raw.g);
-        Serial.print(" B: "); Serial.println(raw.b);
-
         uint8_t correctedR = pgm_read_byte(&gamma8[raw.r]);
         uint8_t correctedG = pgm_read_byte(&gamma8[raw.g]);
         uint8_t correctedB = pgm_read_byte(&gamma8[raw.b]);
 
-        Serial.print("gamma8 - R: "); Serial.print(correctedR);
-        Serial.print(" G: "); Serial.print(correctedG);
-        Serial.print(" B: "); Serial.println(correctedB);
-        Serial.println();
-
         analogWrite(_pinR, correctedR);
         analogWrite(_pinG, correctedG);
         analogWrite(_pinB, correctedB);
+        
     } else {
         analogWrite(_pinR, raw.r);
         analogWrite(_pinG, raw.g);

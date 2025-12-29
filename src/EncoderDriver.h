@@ -16,6 +16,9 @@ public:
 
     // The function you requested to check for a new press
     bool get_press();
+
+    // Get a long press
+    bool get_long_press();
 };
 
 class RotEncDriver {

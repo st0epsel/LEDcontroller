@@ -4,24 +4,29 @@
 #include "LEDDriver.h"
 #include "ColorUtils.h"
 
+
 BtnDriver modeButton(Pins::BTN);
 RotEncDriver rotaryEncoder(Pins::ENC_A, Pins::ENC_B);
 LEDDriver ledDriver(Pins::RED, Pins::GREEN, Pins::BLUE);
 
 int8_t rotation = 0;
 bool buttonPressed = false;
+bool longPressed = false;
 uint8_t mode = 0;
 // mode 0 == hue adjust
 // mode 1 == saturation adjust
 // mode 2 == brightness adjust
-HSV colorHSV = Config::DEFAULT_COLOR;
-RGB colorRGB = hsv_to_rgb(colorHSV);
+
+// Load color from EEPROM
+HSV colorHSV = loadDefaultColor();
 unsigned long last_rot_time = 0;
 
 void setup(){ 
+
   modeButton.begin();
   rotaryEncoder.begin();
   ledDriver.begin();
+
   ledDriver.setHSV(colorHSV);
   if (Config::SERIAL_OUTPUT){
     Serial.begin(Config::SERIAL_BAUDRATE);
@@ -32,6 +37,20 @@ void setup(){
 void loop(){
   buttonPressed = modeButton.get_press();
   rotation = rotaryEncoder.get_rotation();
+
+  // Handle Save Command
+  if (longPressed) {
+    saveDefaultColor(colorHSV);
+    
+    if (Config::SERIAL_OUTPUT) Serial.println("color saved to EEPROM");
+    
+    // Visual feedback: Flash White
+    ledDriver.setHSV({0, 0, 190}); 
+    delay(200);
+    ledDriver.setHSV({0, 0, 190}); 
+    delay(200);
+    ledDriver.setHSV(colorHSV);
+  }
 
   // Update mode / HSV values
   if (buttonPressed){
@@ -93,8 +112,7 @@ void loop(){
     }
   }
 
-  // Output user inputs
-  /*
+  // Output user inputs and colors to serial
   if (Config::SERIAL_OUTPUT){
     if (buttonPressed){
       Serial.print("BTN - Mode: "); Serial.println(mode);
@@ -108,10 +126,6 @@ void loop(){
       Serial.print("H: "); Serial.print(colorHSV.h);
       Serial.print(" S: "); Serial.print(colorHSV.s);
       Serial.print(" V: "); Serial.println(colorHSV.v);
-      colorRGB = hsv_to_rgb(colorHSV);
-      Serial.print("R: "); Serial.print(colorRGB.r);
-      Serial.print(" G: "); Serial.print(colorRGB.g);
-      Serial.print(" B: "); Serial.println(colorRGB.b);
     }
-  }*/
+  }
 }

@@ -31,6 +31,22 @@ bool BtnDriver::get_press() {
     return pressed;
 }
 
+bool BtnDriver::get_long_press() {
+    bool current_reading = digitalRead(_pin);
+    bool long_pressed = false;
+
+    if (current_reading == LOW) {
+        if ((millis() - _last_debounce_time) > Config::long_press_duration_ms) {
+            long_pressed = true;
+            _last_debounce_time = millis();
+        }
+    } else {
+        _last_debounce_time = millis();
+    }
+
+    return long_pressed;
+}
+
 RotEncDriver::RotEncDriver(uint8_t pinA, uint8_t pinB) {
     _pinA = pinA;
     _pinB = pinB;

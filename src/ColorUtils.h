@@ -13,5 +13,8 @@ struct HSV {
     uint8_t v; // 0 to 255 no rollover
 };
 
+void saveDefaultColor(HSV color);
+HSV loadDefaultColor();
+
 // Just the name and the "shape" of the function
 RGB hsv_to_rgb(HSV in);

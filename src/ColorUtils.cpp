@@ -1,8 +1,20 @@
 #include <Arduino.h>
 #include <stdint.h>
 #include <avr/pgmspace.h>
+#include <EEPROM.h>
 #include "Config.h"
 #include "ColorUtils.h"
+
+
+void saveDefaultColor(HSV color) {
+    EEPROM.put(0, color); 
+}
+
+HSV loadDefaultColor() {
+    HSV color;
+    EEPROM.get(0, color); 
+    return color;
+}
 
 
 RGB hsv_to_rgb(HSV in) {
