@@ -16,9 +16,6 @@ namespace Pins {
 
 // --- CALIBRATION ---
 namespace Config {
-    constexpr bool HIGHLIGHT_MODE = false;
-    constexpr unsigned long HIGHLIGHT_DURATION_MS = 500;
-
     constexpr bool LOG_BRIGHTNESS = true;
 
     constexpr uint8_t HUE_STEP = 4; 

@@ -77,39 +77,8 @@ void loop(){
         break;
       }
     }
-  }
-
-  // Update LED
-  if (rotation != 0){
-    // User highlight mode to show changes
-    if (Config::HIGHLIGHT_MODE){
-      if (millis() - last_rot_time < Config::HIGHLIGHT_DURATION_MS){
-        switch (mode) {
-          case (0):{
-            // Hue mode - set to maximum saturation
-            HSV highlightColor = {colorHSV.h, 255, max(colorHSV.v, (uint8_t)128)};
-            ledDriver.setHSV(highlightColor);
-            break;
-          }
-          case (1):{
-            // Saturation mode - assure minimum brighness
-            HSV highlightColor = {0, 0, max(colorHSV.v, (uint8_t)128)};
-            ledDriver.setHSV(highlightColor);
-            break;
-          }
-          case (2):{
-            // Brightness mode - set to white with selected brightness
-            HSV highlightColor = {0, 0, colorHSV.v};
-            ledDriver.setHSV(highlightColor);
-            break;
-          }
-        } 
-      } else {
-      ledDriver.setHSV(colorHSV);
-      }
-    } else {
-      ledDriver.setHSV(colorHSV);
-    }
+    // Update LED
+    ledDriver.setHSV(colorHSV);
   }
 
   // Output user inputs and colors to serial
