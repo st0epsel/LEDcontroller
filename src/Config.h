@@ -1,5 +1,6 @@
 #pragma once
 #include <Arduino.h>
+#include "ColorUtils.h"
 
 namespace Pins {
     // LED control pins
