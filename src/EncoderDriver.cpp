@@ -46,41 +46,25 @@ void RotEncDriver::begin() {
 }
 
 int8_t RotEncDriver::get_rotation() {
-    bool current_state_A = digitalRead(_pinA);
-    bool current_state_B = digitalRead(_pinB);
-    int8_t rotation = 0;
+    // 1. Read the current pins and combine them into a 2-bit number
+    uint8_t current_state = (digitalRead(_pinA) << 1) | digitalRead(_pinB);
+    static uint8_t encoder_history = 0;
+    int8_t result = 0;
 
-    // pin A
-    if ((millis() - _last_debounce_time_A) > Config::rot_eng_min_delay) {
-        if (current_state_A != _last_state_A) {
-            if (current_state_A == LOW) {
-                // Pin A is low, check pin B to determine direction
-                if (digitalRead(_pinB) == HIGH) {
-                    rotation = 1; // Clockwise
-                } else {
-                    rotation = -1; // Counter-clockwise
-                }
-            }
-            _last_debounce_time_A = millis();
-        }
-        _last_state_A = current_state_A;
+    // 2. If the state hasn't changed, do nothing
+    if (current_state == (encoder_history & 0x03)) {
+        return 0;
     }
 
-    // pin B
-    if ((millis() - _last_debounce_time_B) > Config::rot_eng_min_delay) {
-        if (current_state_B != _last_state_B) {
-            if (current_state_B == LOW) {
-                // Pin B is low, check pin A to determine direction
-                if (digitalRead(_pinA) == HIGH) {
-                    rotation = -1; // Counter-clockwise
-                } else {
-                    rotation = 1; // Clockwise
-                }
-            }
-            _last_debounce_time_B = millis();
-        }
-        _last_state_B = current_state_B;
-    }
+    // 3. Store the new state in the history (keeping the last 4 bits)
+    // History looks like: [Old_A][Old_B][New_A][New_B]
+    encoder_history = ((encoder_history << 2) | current_state) & 0x0F;
+    
+    // Clockwise transitions
+    if (encoder_history == 0b0111) result = -1; 
+    
+    // Counter-clockwise transitions
+    if (encoder_history == 0b1011) result = 1;
 
-    return rotation;
+    return result;
 }

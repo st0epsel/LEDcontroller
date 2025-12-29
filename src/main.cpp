@@ -1,8 +1,8 @@
 #include <Arduino.h>
-#include "EncoderDriver.h"
 #include "Config.h" 
-#include "ColorUtils.h"
+#include "EncoderDriver.h"
 #include "LEDDriver.h"
+#include "ColorUtils.h"
 
 BtnDriver modeButton(Pins::BTN);
 RotEncDriver rotaryEncoder(Pins::ENC_A, Pins::ENC_B);
@@ -15,14 +15,16 @@ uint8_t mode = 0;
 // mode 1 == saturation adjust
 // mode 2 == brightness adjust
 HSV colorHSV = Config::DEFAULT_COLOR;
+RGB colorRGB = hsv_to_rgb(colorHSV);
+unsigned long last_rot_time = 0;
 
 void setup(){ 
-  Serial.begin(Config::SERIAL_BAUDRATE);
   modeButton.begin();
   rotaryEncoder.begin();
   ledDriver.begin();
   ledDriver.setHSV(colorHSV);
   if (Config::SERIAL_OUTPUT){
+    Serial.begin(Config::SERIAL_BAUDRATE);
     Serial.println("Button instanciated - Setup Complete");
   }
 }
@@ -30,31 +32,69 @@ void setup(){
 void loop(){
   buttonPressed = modeButton.get_press();
   rotation = rotaryEncoder.get_rotation();
-  // Update mode / color
+
+  // Update mode / HSV values
   if (buttonPressed){
     mode = (mode + 1) % 3;
   }
   if (rotation != 0){
+    last_rot_time = millis();
     switch (mode) {
+      // hue mode
       case (0):{
         colorHSV.h = colorHSV.h + rotation * Config::HUE_STEP;
         break;
       }
+      // saturation mode
       case (1):{
         int16_t new_s = (int16_t)colorHSV.s + (rotation * Config::SAT_STEP);
-        colorHSV.s = new_s < 0 ? 0 : (new_s > 255 ? 255 : new_s);
+        colorHSV.s = constrain(new_s, 0, 255);
         break;
       }
+      // brightness mode
       case (2):{
         int16_t new_v = (int16_t)colorHSV.v + (rotation * Config::BRIGHT_STEP);
-        colorHSV.v = new_v < 0 ? 0 : (new_v > 255 ? 255 : new_v);
+        colorHSV.v = constrain(new_v, 25, 255);
         break;
       }
     }
-    // Update LED
-    ledDriver.setHSV(colorHSV);
   }
+
+  // Update LED
+  if (rotation != 0){
+    // User highlight mode to show changes
+    if (Config::HIGHLIGHT_MODE){
+      if (millis() - last_rot_time < Config::HIGHLIGHT_DURATION_MS){
+        switch (mode) {
+          case (0):{
+            // Hue mode - set to maximum saturation
+            HSV highlightColor = {colorHSV.h, 255, max(colorHSV.v, (uint8_t)128)};
+            ledDriver.setHSV(highlightColor);
+            break;
+          }
+          case (1):{
+            // Saturation mode - assure minimum brighness
+            HSV highlightColor = {0, 0, max(colorHSV.v, (uint8_t)128)};
+            ledDriver.setHSV(highlightColor);
+            break;
+          }
+          case (2):{
+            // Brightness mode - set to white with selected brightness
+            HSV highlightColor = {0, 0, colorHSV.v};
+            ledDriver.setHSV(highlightColor);
+            break;
+          }
+        } 
+      } else {
+      ledDriver.setHSV(colorHSV);
+      }
+    } else {
+      ledDriver.setHSV(colorHSV);
+    }
+  }
+
   // Output user inputs
+  /*
   if (Config::SERIAL_OUTPUT){
     if (buttonPressed){
       Serial.print("BTN - Mode: "); Serial.println(mode);
@@ -68,6 +108,10 @@ void loop(){
       Serial.print("H: "); Serial.print(colorHSV.h);
       Serial.print(" S: "); Serial.print(colorHSV.s);
       Serial.print(" V: "); Serial.println(colorHSV.v);
+      colorRGB = hsv_to_rgb(colorHSV);
+      Serial.print("R: "); Serial.print(colorRGB.r);
+      Serial.print(" G: "); Serial.print(colorRGB.g);
+      Serial.print(" B: "); Serial.println(colorRGB.b);
     }
-  }
+  }*/
 }

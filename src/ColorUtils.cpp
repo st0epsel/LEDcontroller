@@ -8,7 +8,7 @@
 RGB hsv_to_rgb(HSV in) {
     float r = 0, g = 0, b = 0;
 
-    // 1. Normalize H, S, and V to usable float ranges
+    // Normalize H, S, and V to usable float ranges
     // H is mapped to 0.0 - 6.0 (6 sectors)
     // S and V are mapped to 0.0 - 1.0
     float h = (in.h * 6.0f) / 255.0f;
@@ -36,8 +36,8 @@ RGB hsv_to_rgb(HSV in) {
     }
 
     return {
-        (uint8_t)(r * 255.0f),
-        (uint8_t)(g * 255.0f),
-        (uint8_t)(b * 255.0f)
+        (uint8_t)constrain(r * 255, 0, 255),
+        (uint8_t)constrain(g * 255, 0, 255),
+        (uint8_t)constrain(b * 255, 0, 255)
     };
 }
