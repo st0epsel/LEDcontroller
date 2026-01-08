@@ -20,8 +20,6 @@ public:
 
     void set_HSV(HSV colorHSV);
 
-    void set_RGB(RGB colorRGB);
-
     void update();
 
     void write_RGB(RGB colorRGB);
