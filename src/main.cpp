@@ -13,13 +13,13 @@ int8_t rotation = 0;
 bool short_pressed = false;
 bool long_pressed = false;
 uint8_t mode = 0;
+HSV DEFAULT_COLOR = {0.0f, 0.0f, 1.0f};
 // mode 0 == hue adjust
 // mode 1 == saturation adjust
 // mode 2 == brightness adjust
 
-// Load color from EEPROM
-HSV colorHSV = loadDefaultColor();
 unsigned long last_rot_time = 0;
+HSV colorHSV;
 
 void setup(){ 
 
@@ -27,16 +27,24 @@ void setup(){
   rotaryEncoder.begin();
   ledDriver.begin();
 
-  ledDriver.setHSV(colorHSV);
+  // Load saved color from EEPROM
+  colorHSV = loadDefaultColor();
+  if (isnan(colorHSV.h) || isnan(colorHSV.s) || isnan(colorHSV.v)){
+    colorHSV = Config::FALLBACK_COLOR; // Fallback to default if EEPROM is uninitialized or corrupted
+  }
+  ledDriver.set_HSV(colorHSV);
+
   if (Config::SERIAL_OUTPUT){
     Serial.begin(Config::SERIAL_BAUDRATE);
-    Serial.println("Button instanciated - Setup Complete");
+    Serial.println("... serial initialized");
+    Serial.println("setup complete");
   }
 }
 
 void loop(){
   modeButton.update();
   rotaryEncoder.update();
+  ledDriver.update();
 
   short_pressed = modeButton.get_press();
   long_pressed = modeButton.get_long_press();
@@ -49,15 +57,15 @@ void loop(){
     if (Config::SERIAL_OUTPUT) Serial.println("color saved to EEPROM");
     
     // Visual feedback: Flash White
-    ledDriver.setHSV({0, 0, 190}); 
+    ledDriver.write_RGB({0.8f, 0.8f, 0.8f}); 
     delay(200);
-    ledDriver.setHSV({0, 0, 0}); 
+    ledDriver.write_RGB({0.0f, 0.0f, 0.0f}); 
     delay(200);
-    ledDriver.setHSV({0, 0, 190}); 
+    ledDriver.write_RGB({0.8f, 0.8f, 0.8f}); 
     delay(200);
-    ledDriver.setHSV({0, 0, 0}); 
+    ledDriver.write_RGB({0.0f, 0.0f, 0.0f}); 
     delay(200);
-    ledDriver.setHSV(colorHSV);
+    ledDriver.set_HSV(colorHSV); // Restore previous color
   }
 
   // Update mode / HSV values
@@ -70,23 +78,23 @@ void loop(){
       // hue mode
       case (0):{
         colorHSV.h = colorHSV.h + rotation * Config::HUE_STEP;
+        if (colorHSV.h < 0.0f) colorHSV.h += 1.0f;
+        if (colorHSV.h > 1.0f) colorHSV.h -= 1.0f;
         break;
       }
       // saturation mode
       case (1):{
-        int16_t new_s = (int16_t)colorHSV.s + (rotation * Config::SAT_STEP);
-        colorHSV.s = constrain(new_s, 0, 255);
+        colorHSV.s = constrain(colorHSV.s + rotation * Config::SAT_STEP, 0.0f, 1.0f);
         break;
       }
       // brightness mode
       case (2):{
-        int16_t new_v = (int16_t)colorHSV.v + (rotation * Config::BRIGHT_STEP);
-        colorHSV.v = constrain(new_v, 25, 255);
+        colorHSV.v = constrain(colorHSV.v + rotation * Config::BRIGHT_STEP, 0.1f, 1.0f);
         break;
       }
     }
     // Update LED
-    ledDriver.setHSV(colorHSV);
+    ledDriver.set_HSV(colorHSV); // updates target color (only get updated in next loop cycle)
   }
 
   // Output user inputs and colors to serial
@@ -100,9 +108,7 @@ void loop(){
       } else {
         Serial.println("CCW");
       }
-      Serial.print("H: "); Serial.print(colorHSV.h);
-      Serial.print(" S: "); Serial.print(colorHSV.s);
-      Serial.print(" V: "); Serial.println(colorHSV.v);
+      printHSV(colorHSV);
     }
   }
 }

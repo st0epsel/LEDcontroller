@@ -2,19 +2,23 @@
 #include <Arduino.h>
 
 struct RGB {
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
+    float r; // 0.0 to 1.0
+    float g; // 0.0 to 1.0
+    float b; // 0.0 to 1.0
 };
 
 struct HSV {
-    uint8_t h; // 0 to 255 with rollover
-    uint8_t s; // 0 to 255 no rollover
-    uint8_t v; // 0 to 255 no rollover
+    float h; // 0.0 to 1.0 with rollover
+    float s; // 0.0 to 1.0 no rollover
+    float v; // 0.0 to 1.0 no rollover
 };
 
 void saveDefaultColor(HSV color);
+
 HSV loadDefaultColor();
 
-// Just the name and the "shape" of the function
 RGB hsv_to_rgb(HSV in);
+
+void printRGB(const RGB& colorRGB);
+
+void printHSV(const HSV& colorHSV);

@@ -17,10 +17,15 @@ namespace Pins {
 // --- CALIBRATION ---
 namespace Config {
 
+    // --- BRIGHTNESS CONTROL ---
     constexpr bool LOG_BRIGHTNESS = true;
-    constexpr uint8_t HUE_STEP = 4; 
-    constexpr uint8_t SAT_STEP = 8; 
-    constexpr uint8_t BRIGHT_STEP = 8; 
+    constexpr float HUE_STEP = 0.015f; 
+    constexpr float SAT_STEP = 0.03f; 
+    constexpr float BRIGHT_STEP = 0.03f; 
+    constexpr float LED_FADE_MIN = 0.005f;
+    constexpr float BRIGHTNESS_GAIN = 1.0f; // color intensity change per second
+
+    constexpr HSV FALLBACK_COLOR = {0.0f, 0.0f, 1.0f};
 
     // --- DEBOUNCE & TIMINGS ---
     constexpr uint8_t BTN_DEBOUNCE_T = 50;
